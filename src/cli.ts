@@ -47,7 +47,7 @@ function parseLine(line: string): [string, number] {
 }
 
 /** Constructs a tree from an array of path / size pairs. */
-function treeFromRows(rows: readonly [string, number][]): tree.Node {
+function treeFromRows(rows: readonly [string, number, number?][]): tree.Node {
   let node = tree.treeify(rows);
 
   // If there's a common empty parent, skip it.
@@ -74,6 +74,52 @@ const processSizePathPairs: ProcessorFn = async args => {
   return text.split('\n').map(parseLine);
 }
 
+const processSizeValuePathPairs: ProcessorFn = async args => {
+  const text = await collectInputFromArgs(args);
+  const results = [];
+  const ptrs = new Map<string, [string, number, number?]>();
+  let d = '';
+  for (const line of text.split('\n')) {
+    let mm = line.match(/\[\[(.*)\]\]/);
+    if (mm) {
+      const [, dim] = mm;
+      console.log(dim);
+      d = dim;
+      continue;
+    }
+    const x = parseLine(line);
+    if (!d) {
+      ptrs.set(x[0], x);
+      results.push(x);
+    } else {
+      const dd = ptrs.get(x[0]);
+      if (dd) {
+        dd[2] = x[1];
+      }
+    }
+  }
+  return results;
+}
+
+function colorizeNode(n: tree.Node) {
+  if (!n.hasValues || !n.dom) {
+    return;
+  }
+  if (!n.value) {
+    n.dom.style.backgroundColor = 'rgba(150,150,150,1)';
+    return;
+  }
+
+  // rgb(239,179,179) - red
+  // rgb(217,247,217) - green
+  const r = (217 - 239)*n.value + 239;
+  const g = (247 - 179)*n.value + 179;
+  const b = (217 - 179)*n.value + 179;
+  //const a = (0.15 + (0.15*n.value)).toFixed(2);
+  const t = `rgba(${r},${g},${b},1)`;
+  n.dom.style.backgroundColor = t;
+}
+
 function humanSizeCaption(n: tree.Node): string {
   let units = ['', 'k', 'm', 'g'];
   let unit = 0;
@@ -85,7 +131,13 @@ function humanSizeCaption(n: tree.Node): string {
   const numFmt =
     unit === 0 && size === Math.floor(size)
       ? '' + size // Prefer "1" to "1.0"
-      : size.toFixed(1) + units[unit];
+        : size.toFixed(1) + units[unit];
+  if (n.value) {
+    return `${n.id || ''} (${n.value.toFixed(2)}, ${numFmt})`;
+  }
+  if (n.hasValues && n.value === undefined) {
+    return `${n.id || ''} (NONE, ${numFmt})`;
+  }
   return `${n.id || ''} (${numFmt})`;
 }
 
@@ -93,7 +145,8 @@ function formatText(rootNode: tree.Node): string {
   const lines: string[] = [];
   const help = (node: tree.Node, prefix: string) => {
     const path = prefix + (node.id ?? '');
-    lines.push(`${node.size}\t${path}`);
+    let size = node.value ?? node.size;
+    lines.push(`${size}\t${path}`);
     node.children?.forEach(child => help(child, path + '/'));
   };
   help(rootNode, '');
@@ -117,14 +170,14 @@ async function main() {
       new Option('-f, --format [format]', 'Set output format').choices([
         'html',
         'json',
-        'text',
+        'text'
       ])
     )
     .option('--title [string]', 'title of output HTML')
     .parse(process.argv);
 
   const args = program.opts();
-  let processor = processSizePathPairs;
+  let processor = processSizeValuePathPairs;
   const arg0 = program.args[0];
   if (arg0 === 'du') {
     processor = processDir;
@@ -178,6 +231,7 @@ body {
 function render() {
   webtreemap.render(document.getElementById("treemap"), data, {
     caption: ${humanSizeCaption},
+    applyMutations: ${colorizeNode},
   });
 }
 window.addEventListener('resize', render);
