@@ -19,11 +19,11 @@
 import {Command, Option} from 'commander';
 import {promises as fs} from 'fs';
 import open from 'open';
-import { processDir } from './processors/du';
+import {processDir} from './processors/du';
 
 import {processJsonSpaceUsage} from './processors/json';
 import * as tree from './tree';
-import { collectInputFromArgs, ProcessorFn, writeToTempFile } from './util';
+import {collectInputFromArgs, ProcessorFn, writeToTempFile} from './util';
 
 function parseLine(line: string): [string, number] {
   if (line.match(/^\s*$/)) {
@@ -72,7 +72,7 @@ function treeFromRows(rows: readonly [string, number, number?][]): tree.Node {
 const processSizePathPairs: ProcessorFn = async args => {
   const text = await collectInputFromArgs(args);
   return text.split('\n').map(parseLine);
-}
+};
 
 const processSizeValuePathPairs: ProcessorFn = async args => {
   const text = await collectInputFromArgs(args);
@@ -99,7 +99,7 @@ const processSizeValuePathPairs: ProcessorFn = async args => {
     }
   }
   return results;
-}
+};
 
 function colorizeNode(n: tree.Node) {
   if (!n.hasValues || !n.dom) {
@@ -112,9 +112,9 @@ function colorizeNode(n: tree.Node) {
 
   // rgb(239,179,179) - red
   // rgb(217,247,217) - green
-  const r = (217 - 239)*n.value + 239;
-  const g = (247 - 179)*n.value + 179;
-  const b = (217 - 179)*n.value + 179;
+  const r = (217 - 239) * n.value + 239;
+  const g = (247 - 179) * n.value + 179;
+  const b = (217 - 179) * n.value + 179;
   //const a = (0.15 + (0.15*n.value)).toFixed(2);
   const t = `rgba(${r},${g},${b},1)`;
   n.dom.style.backgroundColor = t;
@@ -131,7 +131,7 @@ function humanSizeCaption(n: tree.Node): string {
   const numFmt =
     unit === 0 && size === Math.floor(size)
       ? '' + size // Prefer "1" to "1.0"
-        : size.toFixed(1) + units[unit];
+      : size.toFixed(1) + units[unit];
   if (n.value) {
     return `${n.id || ''} (${n.value.toFixed(2)}, ${numFmt})`;
   }
@@ -170,7 +170,7 @@ async function main() {
       new Option('-f, --format [format]', 'Set output format').choices([
         'html',
         'json',
-        'text'
+        'text',
       ])
     )
     .option('--title [string]', 'title of output HTML')

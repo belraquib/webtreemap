@@ -36,9 +36,9 @@ export interface Node {
    * named values for this node.
    */
   value?: number;
-    hasValues?: boolean;
-    minV?: number;
-    maxV?: number;
+  hasValues?: boolean;
+  minV?: number;
+  maxV?: number;
 }
 
 /**
@@ -47,24 +47,24 @@ export interface Node {
  */
 export function treeify(data: readonly [string, number, number?][]): Node {
   const tree: Node = {size: 0, id: ''};
-    let hasValues = false;
-    let minV = 1000;
-    let maxV = -1000;
+  let hasValues = false;
+  let minV = 1000;
+  let maxV = -1000;
   for (const [path, size, value] of data) {
     const parts = path.replace(/\/$/, '').split('/');
     let t = tree;
     while (parts.length > 0) {
       const id = parts.shift();
       if (!t.children) {
-          t.children = [];
-       }
-        let child = t.children.find(c => c.id === id);
-        if (path === '/') {
-            // This is an explicit override of the root.
-            child = tree;
-        } else if (!child) {
-            child = {id, size: 0};
-            t.children.push(child);
+        t.children = [];
+      }
+      let child = t.children.find(c => c.id === id);
+      if (path === '/') {
+        // This is an explicit override of the root.
+        child = tree;
+      } else if (!child) {
+        child = {id, size: 0};
+        t.children.push(child);
       }
       if (parts.length === 0) {
         if (child.size !== 0) {
@@ -72,27 +72,27 @@ export function treeify(data: readonly [string, number, number?][]): Node {
         }
         child.size = size;
         child.value = value;
-          if (value) {
-              hasValues = true;
-              minV = Math.min(minV, value);
-              maxV = Math.max(maxV, value);
-          }
+        if (value) {
+          hasValues = true;
+          minV = Math.min(minV, value);
+          maxV = Math.max(maxV, value);
+        }
       }
       t = child;
     }
   }
-    if (hasValues) {
-        const xx = (t:Node) => {
-            t.hasValues = true;
-            t.minV = minV;
-            t.maxV = maxV;
-            if (!t.children) return;
-            for (const c of t.children) {
-                xx(c);
-            }
-        };
-        xx(tree);
-    }
+  if (hasValues) {
+    const xx = (t: Node) => {
+      t.hasValues = true;
+      t.minV = minV;
+      t.maxV = maxV;
+      if (!t.children) return;
+      for (const c of t.children) {
+        xx(c);
+      }
+    };
+    xx(tree);
+  }
   return tree;
 }
 
@@ -125,21 +125,21 @@ export function flatten(
  */
 export function rollup(n: Node) {
   if (!n.children) return;
-    let total = 0;
-    let tv = 0;
+  let total = 0;
+  let tv = 0;
 
   for (const c of n.children) {
     rollup(c);
-      total += c.size;
-      if (c.hasValues) {
-          tv += ((c.value ?? 0) * c.size);
-      }
+    total += c.size;
+    if (c.hasValues) {
+      tv += (c.value ?? 0) * c.size;
+    }
   }
 
-    if (total > n.size) n.size = total;
-    if (n.hasValues && tv > (n.value ?? 0)) {
-        n.value = tv / total;
-    }
+  if (total > n.size) n.size = total;
+  if (n.hasValues && tv > (n.value ?? 0)) {
+    n.value = tv / total;
+  }
 }
 
 /**
