@@ -49,9 +49,7 @@ function parseLine(line: string): [string, number] {
 
 /** Constructs a tree from an array of path / size pairs. */
 function treeFromRows(
-  rows: readonly [string, number, number?][],
-  doRollup: boolean
-): tree.Node {
+  rows: readonly [string, number, number?][]): tree.Node {
   let node = tree.treeify(rows);
 
   // If there's a common empty parent, skip it.
@@ -66,10 +64,7 @@ function treeFromRows(
     }
   }
 
-  if (doRollup) {
-    tree.rollup(node);
-  }
-
+  tree.rollup(node);
   tree.sort(node);
   tree.flatten(node);
 
@@ -207,7 +202,6 @@ async function main() {
       ])
     )
     .option('--title [string]', 'title of output HTML')
-    .option('--no-rollup', 'Skips the rollup step')
     .option('--no-ignore-small', 'Ignores small area nodes')
     .parse(process.argv);
 
