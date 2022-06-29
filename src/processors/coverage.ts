@@ -23,9 +23,6 @@ async function processXml(xmlPath: string, fileSizes: [string, number, number?][
                 continue;
             }
             data[2] = parseFloat(parsedClass['@_line-rate']);
-            if (data[0].includes('/buildings/')) {
-                console.log(data[0], data[2]);
-            }
         }
     }
 }
@@ -37,7 +34,12 @@ export const processCoverage: ProcessorFn = async args => {
         const fileName = pathInfo[0];
         if (fileName.includes('__tests__') ||
             fileName.includes('__stories__') ||
-            fileName.includes('/node_modules/')) {
+            fileName.includes('/node_modules/') ||
+            fileName.endsWith('test.ts') ||
+            fileName.endsWith('test.tsx') ||
+            fileName.endsWith('test.cc') ||
+            fileName.endsWith('test.py')
+            ) {
             return false;
         }
 

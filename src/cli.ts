@@ -77,6 +77,8 @@ const processSizePathPairs: ProcessorFn = async args => {
 };
 
 function colorizeNode(n: tree.Node, options: TreemapOptions) {
+  // Colors the node value between the min and max color. Assumes
+  // that the value is in the range [0,1]
   if (!options.hasValues) {
     return;
   }
@@ -124,8 +126,11 @@ function formatText(rootNode: tree.Node): string {
   const lines: string[] = [];
   const help = (node: tree.Node, prefix: string) => {
     const path = prefix + (node.id ?? '');
-    let size = node.value ?? node.size;
-    lines.push(`${size}\t${path}`);
+    if (node.value) {
+      lines.push(`${node.value},${node.size}\t${path}`);
+    } else {
+      lines.push(`${node.size}\t${path}`);
+    }
     node.children?.forEach(child => help(child, path + '/'));
   };
   help(rootNode, '');
