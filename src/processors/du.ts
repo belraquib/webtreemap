@@ -4,7 +4,7 @@ import {promises as fs, statSync} from 'fs';
 import { ProcessorFn } from "../util";
 
 // Adapted from https://stackoverflow.com/a/45130990/388951
-async function getFiles(dir: string): Promise<[string, number][]> {
+export async function getFiles(dir: string): Promise<[string, number][]> {
   const dirents = await fs.readdir(dir, { withFileTypes: true });
   const files = await Promise.all(dirents.map(async (dirent) => {
     const res = path.resolve(dir, dirent.name);

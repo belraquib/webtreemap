@@ -56,10 +56,12 @@ export function isDOMNode(e: Element): boolean {
 export interface Options {
   padding: [number, number, number, number];
   lowerBound: number;
-  applyMutations(node: Node): void;
-  caption(node: Node): string;
+  applyMutations(node: Node, options?: Options): void;
+  caption(node: Node, options?: Options): string;
   showNode(node: Node, width: number, height: number): boolean;
   showChildren(node: Node, width: number, height: number): boolean;
+
+  hasValues: boolean;
 }
 
 /**
@@ -117,6 +119,7 @@ function defaultOptions(options: Partial<Options>): Options {
       ((node: Node, width: number, height: number): boolean => {
         return width > 40 && height > 40;
       }),
+      hasValues: options.hasValues ?? false,
   };
   return opts;
 }
@@ -135,11 +138,11 @@ export class TreeMap {
     if (this.options.caption) {
       const caption = document.createElement('div');
       caption.className = CSS_PREFIX + 'caption';
-      caption.innerText = this.options.caption(node);
+      caption.innerText = this.options.caption(node, this.options);
       dom.appendChild(caption);
     }
     node.dom = dom;
-    this.options.applyMutations(node);
+    this.options.applyMutations(node, this.options);
     return dom;
   }
 

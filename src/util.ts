@@ -41,6 +41,8 @@ export async function collectInputFromArgs(
   return args.length > 0 ? readFromFiles(args) : readFromStdin();
 }
 
+// A processor should return a /-delimetd string, the size, and
+// an optional value.
 export type ProcessorFn = (
   args: readonly string[]
-) => Promise<[string, number][]>;
+) => Promise<[string, number, number?][]>;

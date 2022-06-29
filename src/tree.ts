@@ -33,12 +33,12 @@ export interface Node {
   /** dom node will be created and associated with the data. */
   dom?: HTMLElement;
   /**
-   * named values for this node.
+   * the value is independent of size. This controls an arbitrary
+   * second dimension. Clients can use this in conjunction with
+   * treemap's applyMutation to annotate a given node (with a
+   * color, for example).
    */
   value?: number;
-  hasValues?: boolean;
-  minV?: number;
-  maxV?: number;
 }
 
 /**
@@ -47,9 +47,6 @@ export interface Node {
  */
 export function treeify(data: readonly [string, number, number?][]): Node {
   const tree: Node = {size: 0, id: ''};
-  let hasValues = false;
-  let minV = 1000;
-  let maxV = -1000;
   for (const [path, size, value] of data) {
     const parts = path.replace(/\/$/, '').split('/');
     let t = tree;
@@ -72,26 +69,9 @@ export function treeify(data: readonly [string, number, number?][]): Node {
         }
         child.size = size;
         child.value = value;
-        if (value) {
-          hasValues = true;
-          minV = Math.min(minV, value);
-          maxV = Math.max(maxV, value);
-        }
       }
       t = child;
     }
-  }
-  if (hasValues) {
-    const xx = (t: Node) => {
-      t.hasValues = true;
-      t.minV = minV;
-      t.maxV = maxV;
-      if (!t.children) return;
-      for (const c of t.children) {
-        xx(c);
-      }
-    };
-    xx(tree);
   }
   return tree;
 }
@@ -117,29 +97,32 @@ export function flatten(
   }
 }
 
+function sumAndKeepLarger(n: Node) {
+  return Math.max(n.size, n.children!.map(c=>c.size).reduce((a,v)=>a+v, 0));
+}
+
+function weightedMeanOfValues(n: Node) {
+  return n.children!.map(c=>c.size * (c.value ?? 0)).reduce((a,v)=>a+v, 0) / n.size;
+}
+
+export type TreeNodeFunction = (n:Node)=>number;
+
 /**
  * rollup fills in the size attribute for nodes by summing their children.
  *
- * Note that it's legal for input data to have a node with a size larger
- * than the sum of its children, perhaps because some data was left out.
+ * Note that by default it's legal for input data to have a node with a
+ * size larger than the sum of its children, perhaps because some data was left out.
  */
-export function rollup(n: Node) {
+export function rollup(n: Node,
+                       sizeAggregator:TreeNodeFunction=sumAndKeepLarger,
+                       valueAggregator:TreeNodeFunction=weightedMeanOfValues) {
   if (!n.children) return;
-  let total = 0;
-  let tv = 0;
-
   for (const c of n.children) {
     rollup(c);
-    total += c.size;
-    if (c.hasValues) {
-      tv += (c.value ?? 0) * c.size;
-    }
   }
 
-  if (total > n.size) n.size = total;
-  if (n.hasValues && tv > (n.value ?? 0)) {
-    n.value = tv / total;
-  }
+  n.size = sizeAggregator(n);
+  n.value = valueAggregator(n);
 }
 
 /**

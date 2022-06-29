@@ -20,10 +20,13 @@ import {Command, Option} from 'commander';
 import {promises as fs} from 'fs';
 import open from 'open';
 import {processDir} from './processors/du';
-
 import {processJsonSpaceUsage} from './processors/json';
+import {processCoverage} from './processors/coverage';
+
 import * as tree from './tree';
 import {collectInputFromArgs, ProcessorFn, writeToTempFile} from './util';
+import {Options as TreemapOptions} from './treemap'
+
 
 function parseLine(line: string): [string, number] {
   if (line.match(/^\s*$/)) {
@@ -101,26 +104,28 @@ const processSizeValuePathPairs: ProcessorFn = async args => {
   return results;
 };
 
-function colorizeNode(n: tree.Node) {
-  if (!n.hasValues || !n.dom) {
+function colorizeNode(n: tree.Node, options: TreemapOptions) {
+  if (!options.hasValues) {
+    return;
+  }
+  if (!n.dom) {
     return;
   }
   if (!n.value) {
+    // grey ish
     n.dom.style.backgroundColor = 'rgba(150,150,150,1)';
     return;
   }
 
-  // rgb(239,179,179) - red
-  // rgb(217,247,217) - green
+  // rgb(239,179,179) - red - minColor
+  // rgb(217,247,217) - green - maxColor
   const r = (217 - 239) * n.value + 239;
   const g = (247 - 179) * n.value + 179;
   const b = (217 - 179) * n.value + 179;
-  //const a = (0.15 + (0.15*n.value)).toFixed(2);
-  const t = `rgba(${r},${g},${b},1)`;
-  n.dom.style.backgroundColor = t;
+  n.dom.style.backgroundColor = `rgba(${r},${g},${b},1)`;
 }
 
-function humanSizeCaption(n: tree.Node): string {
+function humanSizeCaption(n: tree.Node, options: TreemapOptions): string {
   let units = ['', 'k', 'm', 'g'];
   let unit = 0;
   let size = n.size;
@@ -131,13 +136,15 @@ function humanSizeCaption(n: tree.Node): string {
   const numFmt =
     unit === 0 && size === Math.floor(size)
       ? '' + size // Prefer "1" to "1.0"
-      : size.toFixed(1) + units[unit];
-  if (n.value) {
+        : size.toFixed(1) + units[unit];
+  if (options.hasValues) {
+  if (n.value === undefined) {
+    return `${n.id || ''} (NONE, ${numFmt})`;
+  } else if (n.value) {
     return `${n.id || ''} (${n.value.toFixed(2)}, ${numFmt})`;
   }
-  if (n.hasValues && n.value === undefined) {
-    return `${n.id || ''} (NONE, ${numFmt})`;
   }
+
   return `${n.id || ''} (${numFmt})`;
 }
 
@@ -179,12 +186,17 @@ async function main() {
   const args = program.opts();
   let processor = processSizeValuePathPairs;
   const arg0 = program.args[0];
+  let hasValues = false;
   if (arg0 === 'du') {
     processor = processDir;
     program.args.shift();
   } else if (arg0 === 'du:json') {
     processor = processJsonSpaceUsage;
     program.args.shift();
+  } else if (arg0 === 'coverage') {
+    processor = processCoverage;
+    program.args.shift();
+    hasValues = true;
   }
 
   const rows = await processor(program.args);
@@ -232,6 +244,7 @@ function render() {
   webtreemap.render(document.getElementById("treemap"), data, {
     caption: ${humanSizeCaption},
     applyMutations: ${colorizeNode},
+    hasValues: ${hasValues}
   });
 }
 window.addEventListener('resize', render);
