@@ -76,33 +76,6 @@ const processSizePathPairs: ProcessorFn = async args => {
   return text.split('\n').map(parseLine);
 };
 
-const processSizeValuePathPairs: ProcessorFn = async args => {
-  const text = await collectInputFromArgs(args);
-  const results = [];
-  const ptrs = new Map<string, [string, number, number?]>();
-  let d = '';
-  for (const line of text.split('\n')) {
-    let mm = line.match(/\[\[(.*)\]\]/);
-    if (mm) {
-      const [, dim] = mm;
-      console.log(dim);
-      d = dim;
-      continue;
-    }
-    const x = parseLine(line);
-    if (!d) {
-      ptrs.set(x[0], x);
-      results.push(x);
-    } else {
-      const dd = ptrs.get(x[0]);
-      if (dd) {
-        dd[2] = x[1];
-      }
-    }
-  }
-  return results;
-};
-
 function colorizeNode(n: tree.Node, options: TreemapOptions) {
   if (!options.hasValues) {
     return;
@@ -183,7 +156,7 @@ async function main() {
     .parse(process.argv);
 
   const args = program.opts();
-  let processor = processSizeValuePathPairs;
+  let processor = processSizePathPairs;
   const arg0 = program.args[0];
   let hasValues = false;
   if (arg0 === 'du') {
