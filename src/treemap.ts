@@ -119,7 +119,7 @@ function defaultOptions(options: Partial<Options>): Options {
       ((node: Node, width: number, height: number): boolean => {
         return width > 40 && height > 40;
       }),
-      hasValues: options.hasValues ?? false,
+    hasValues: options.hasValues ?? false,
   };
   return opts;
 }

@@ -98,14 +98,20 @@ export function flatten(
 }
 
 function sumAndKeepLarger(n: Node) {
-  return Math.max(n.size, n.children!.map(c=>c.size).reduce((a,v)=>a+v, 0));
+  return Math.max(
+    n.size,
+    n.children!.map(c => c.size).reduce((a, v) => a + v, 0)
+  );
 }
 
 function weightedMeanOfValues(n: Node) {
-  return n.children!.map(c=>c.size * (c.value ?? 0)).reduce((a,v)=>a+v, 0) / n.size;
+  return (
+    n.children!.map(c => c.size * (c.value ?? 0)).reduce((a, v) => a + v, 0) /
+    n.size
+  );
 }
 
-export type TreeNodeFunction = (n:Node)=>number;
+export type TreeNodeFunction = (n: Node) => number;
 
 /**
  * rollup fills in the size attribute for nodes by summing their children.
@@ -113,9 +119,11 @@ export type TreeNodeFunction = (n:Node)=>number;
  * Note that by default it's legal for input data to have a node with a
  * size larger than the sum of its children, perhaps because some data was left out.
  */
-export function rollup(n: Node,
-                       sizeAggregator:TreeNodeFunction=sumAndKeepLarger,
-                       valueAggregator:TreeNodeFunction=weightedMeanOfValues) {
+export function rollup(
+  n: Node,
+  sizeAggregator: TreeNodeFunction = sumAndKeepLarger,
+  valueAggregator: TreeNodeFunction = weightedMeanOfValues
+) {
   if (!n.children) return;
   for (const c of n.children) {
     rollup(c);

@@ -25,8 +25,7 @@ import {processCoverage} from './processors/coverage';
 
 import * as tree from './tree';
 import {collectInputFromArgs, ProcessorFn, writeToTempFile} from './util';
-import {Options as TreemapOptions} from './treemap'
-
+import {Options as TreemapOptions} from './treemap';
 
 function parseLine(line: string): [string, number] {
   if (line.match(/^\s*$/)) {
@@ -136,13 +135,13 @@ function humanSizeCaption(n: tree.Node, options: TreemapOptions): string {
   const numFmt =
     unit === 0 && size === Math.floor(size)
       ? '' + size // Prefer "1" to "1.0"
-        : size.toFixed(1) + units[unit];
+      : size.toFixed(1) + units[unit];
   if (options.hasValues) {
-  if (n.value === undefined) {
-    return `${n.id || ''} (NONE, ${numFmt})`;
-  } else if (n.value) {
-    return `${n.id || ''} (${n.value.toFixed(2)}, ${numFmt})`;
-  }
+    if (n.value === undefined) {
+      return `${n.id || ''} (NONE, ${numFmt})`;
+    } else if (n.value) {
+      return `${n.id || ''} (${n.value.toFixed(2)}, ${numFmt})`;
+    }
   }
 
   return `${n.id || ''} (${numFmt})`;
