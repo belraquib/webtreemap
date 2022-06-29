@@ -54,6 +54,20 @@ For a [GeoJSON] file, for example, this can tell you whether feature geometries 
 are using more bytes. If it's geometries, then [TopoJSON] might be helpful. If it's properties,
 then you'll need to think more about how you're structuring your data.
 
+### Gradient color based on values
+
+Can be used to visualize nodes with a secondary dimension in the range [0,1]
+
+    treemap with-values < input.data
+
+The format described above is extended by looking for a special line of the form:
+
+    `[[ anytext ]]`
+
+All lines after the above will be considered a secondary value. These are assumed
+to be mostly repeat entries from the initial data, any new entries will be given a size
+of 0.
+
 ### Space used in a source map
 
 See [source-map-explorer].

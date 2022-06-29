@@ -89,9 +89,9 @@ const processSizeValuePathTuple: ProcessorFn = async args => {
   let foundValueDelimeter = false;
   for (const line of text.split('\n')) {
     // A value delimeter looks like [[ text ]]. The text isn't
-    // used directly. Any entries after this will be assumed
-    // to be all or a subset of the entries in the initial lines.
-    // Any new paths discovered after the delimeter are ignored.
+    // used directly.
+    // Any new paths discovered after the delimeter are added
+    // with a size of 0.
     if (line.match(/\[\[(.*)\]\]/)) {
       foundValueDelimeter = true;
       continue;
