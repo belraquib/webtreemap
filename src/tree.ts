@@ -92,45 +92,28 @@ export function flatten(
     if (n.children.length === 1) {
       const child = n.children[0];
       n.id += '/' + child.id;
+      n.size = child.size;
+      n.value = child.value;
       n.children = child.children;
     }
   }
 }
 
-function sumAndKeepLarger(n: Node) {
-  return Math.max(
-    n.size,
-    n.children!.map(c => c.size).reduce((a, v) => a + v, 0)
-  );
-}
-
-function weightedMeanOfValues(n: Node) {
-  return (
-    n.children!.map(c => c.size * (c.value ?? 0)).reduce((a, v) => a + v, 0) /
-    n.size
-  );
-}
-
-export type TreeNodeFunction = (n: Node) => number;
-
 /**
  * rollup fills in the size attribute for nodes by summing their children.
  *
- * Note that by default it's legal for input data to have a node with a
- * size larger than the sum of its children, perhaps because some data was left out.
+ * Note that it's legal for input data to have a node with a size larger
+ * than the sum of its children, perhaps because some data was left out.
  */
-export function rollup(
-  n: Node,
-  sizeAggregator: TreeNodeFunction = sumAndKeepLarger,
-  valueAggregator: TreeNodeFunction = weightedMeanOfValues
-) {
+export function rollup(n: Node) {
   if (!n.children) return;
+  let total = 0;
   for (const c of n.children) {
     rollup(c);
+    total += c.size;
   }
 
-  n.size = sizeAggregator(n);
-  n.value = valueAggregator(n);
+  if (total > n.size) n.size = total;
 }
 
 /**

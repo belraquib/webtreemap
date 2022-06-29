@@ -21,7 +21,6 @@ import {promises as fs} from 'fs';
 import open from 'open';
 import {processDir} from './processors/du';
 import {processJsonSpaceUsage} from './processors/json';
-import {processCoverage} from './processors/coverage';
 
 import * as tree from './tree';
 import {collectInputFromArgs, ProcessorFn, writeToTempFile} from './util';
@@ -49,7 +48,10 @@ function parseLine(line: string): [string, number] {
 }
 
 /** Constructs a tree from an array of path / size pairs. */
-function treeFromRows(rows: readonly [string, number, number?][]): tree.Node {
+function treeFromRows(
+  rows: readonly [string, number, number?][],
+  doRollup: boolean
+): tree.Node {
   let node = tree.treeify(rows);
 
   // If there's a common empty parent, skip it.
@@ -64,7 +66,10 @@ function treeFromRows(rows: readonly [string, number, number?][]): tree.Node {
     }
   }
 
-  tree.rollup(node);
+  if (doRollup) {
+    tree.rollup(node);
+  }
+
   tree.sort(node);
   tree.flatten(node);
 
@@ -74,6 +79,50 @@ function treeFromRows(rows: readonly [string, number, number?][]): tree.Node {
 const processSizePathPairs: ProcessorFn = async args => {
   const text = await collectInputFromArgs(args);
   return text.split('\n').map(parseLine);
+};
+
+const processSizeValuePathTuple: ProcessorFn = async args => {
+  // Parses text of the form
+  // <num> <path1>
+  // <num> <path2>
+  // [[ value delimeter ]]
+  // <num> <path1>
+  // <num> <path2>
+  const text = await collectInputFromArgs(args);
+  const results: [string, number, number?][] = [];
+  const ptrs = new Map<string, [string, number, number?]>();
+  let foundValueDelimeter = false;
+  for (const line of text.split('\n')) {
+    // A value delimeter looks like [[ text ]]. The text isn't
+    // used directly. Any entries after this will be assumed
+    // to be all or a subset of the entries in the initial lines.
+    // Any new paths discovered after the delimeter are ignored.
+    if (line.match(/\[\[(.*)\]\]/)) {
+      foundValueDelimeter = true;
+      continue;
+    }
+    const newLineData = parseLine(line);
+    if (!foundValueDelimeter) {
+      ptrs.set(newLineData[0], newLineData);
+      results.push(newLineData);
+      continue;
+    }
+    const sizeLineData = ptrs.get(newLineData[0]);
+    if (sizeLineData) {
+      sizeLineData[2] = newLineData[1];
+    } else {
+      // No size entry found, add a new entry with a size of zero.
+      results.push([newLineData[0], 0, newLineData[1]]);
+    }
+  }
+  if (results.length === 0) {
+    return results;
+  }
+  if (foundValueDelimeter && results[0].length === 2) {
+    // Add a signal that we expect values.
+    results[0][2] = undefined;
+  }
+  return results;
 };
 
 function colorizeNode(n: tree.Node, options: TreemapOptions) {
@@ -158,6 +207,8 @@ async function main() {
       ])
     )
     .option('--title [string]', 'title of output HTML')
+    .option('--no-rollup', 'Skips the rollup step')
+    .option('--no-ignore-small', 'Ignores small area nodes')
     .parse(process.argv);
 
   const args = program.opts();
@@ -170,14 +221,14 @@ async function main() {
   } else if (arg0 === 'du:json') {
     processor = processJsonSpaceUsage;
     program.args.shift();
-  } else if (arg0 === 'coverage') {
-    processor = processCoverage;
+  } else if (arg0 === 'with-values') {
+    processor = processSizeValuePathTuple;
     program.args.shift();
     hasValues = true;
   }
 
   const rows = await processor(program.args);
-  const node = treeFromRows(rows);
+  const node = treeFromRows(rows, args.rollup);
   const treemapJS = await fs.readFile(__dirname + '/webtreemap.js', 'utf-8');
   const title = args.title || 'webtreemap';
 
@@ -193,6 +244,11 @@ async function main() {
 
   let output: string;
   if (outputFormat === 'html') {
+    const showSmallOptsSnippet = !args.ignoreSmall
+      ? `    showChildren: (() => true),
+    lowerBound: 0,
+`
+      : '';
     output = `<!doctype html>
 <title>${title}</title>
 <style>
@@ -221,7 +277,8 @@ function render() {
   webtreemap.render(document.getElementById("treemap"), data, {
     caption: ${humanSizeCaption},
     applyMutations: ${colorizeNode},
-    hasValues: ${hasValues}
+    hasValues: ${hasValues},
+    ${showSmallOptsSnippet}
   });
 }
 window.addEventListener('resize', render);

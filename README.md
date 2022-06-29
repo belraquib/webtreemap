@@ -58,12 +58,6 @@ then you'll need to think more about how you're structuring your data.
 
 See [source-map-explorer].
 
-### Test Coverage
-
-i.e. "How big are my files and how well are they covered?"
-
-    treemap du <src dir> <coverage.xml>
-
 ## Options
 
 - `-f, --format [format]`
